@@ -14,6 +14,8 @@ import android.widget.Toast;
 public class QuizActivity extends AppCompatActivity {
     private static final String TAG = "QuizActivity";
     private static final String KEY_INDEX = "index";
+    private static final String KEY_CORRECT_COUNT = "correctCount";
+    private static final String KEY_INCORRECT_COUNT = "incorrectCount";
 
     private Button mTrueButton;
     private Button mFalseButton;
@@ -31,6 +33,8 @@ public class QuizActivity extends AppCompatActivity {
     };
 
     private int mCurrentIndex = 0;
+    private int mCorrectCount = 0;
+    private int mIncorrectCount = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -40,6 +44,8 @@ public class QuizActivity extends AppCompatActivity {
 
         if (savedInstanceState != null) {
             mCurrentIndex = savedInstanceState.getInt(KEY_INDEX, 0);
+            mCorrectCount = savedInstanceState.getInt(KEY_CORRECT_COUNT, 0);
+            mIncorrectCount = savedInstanceState.getInt(KEY_INCORRECT_COUNT, 0);
         }
 
         mQuestionTextView = (TextView) findViewById(R.id.question_text_view);
@@ -50,13 +56,13 @@ public class QuizActivity extends AppCompatActivity {
                 updateQuestion();
             }
         });
-        updateQuestion();
 
         mTrueButton = (Button) findViewById(R.id.true_button);
         mTrueButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 checkAnswer(true);
+                setAnswerButtonEnabled(false);
             }
         });
 
@@ -65,9 +71,9 @@ public class QuizActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 checkAnswer(false);
+                setAnswerButtonEnabled(false);
             }
         });
-
 
         if (getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT) {
             mPrevButton = (ImageButton) findViewById(R.id.prev_button);
@@ -91,6 +97,8 @@ public class QuizActivity extends AppCompatActivity {
                 updateQuestion();
             }
         });
+
+        updateQuestion();
     }
 
     @Override
@@ -116,6 +124,8 @@ public class QuizActivity extends AppCompatActivity {
         super.onSaveInstanceState(savedInstanceState);
         Log.i(TAG, "onSaveInstanceState");
         savedInstanceState.putInt(KEY_INDEX, mCurrentIndex);
+        savedInstanceState.putInt(KEY_CORRECT_COUNT, mCorrectCount);
+        savedInstanceState.putInt(KEY_INCORRECT_COUNT, mIncorrectCount);
     }
 
     @Override
@@ -141,6 +151,7 @@ public class QuizActivity extends AppCompatActivity {
             return;
         }
         mQuestionTextView.setText(question);
+        setAnswerButtonEnabled(true);
     }
 
     private void checkAnswer(boolean userPressedTrue) {
@@ -149,13 +160,34 @@ public class QuizActivity extends AppCompatActivity {
 
         if (userPressedTrue == answerIsTrue) {
             messageResId = R.string.correct_toast;
+            mCorrectCount += 1;
         } else {
             messageResId = R.string.incorrect_toast;
+            mIncorrectCount += 1;
         }
-        Toast toast = Toast.makeText(QuizActivity.this,
-                messageResId,
-                Toast.LENGTH_SHORT);
-        toast.setGravity(Gravity.TOP, 0, 200);
-        toast.show();
+        Toast toast;
+        // Challenge 3:2
+        if (mCurrentIndex + 1 == mQuestionBank.length) {    // end quiz
+            int percentage = Math.round(100 * mCorrectCount/(mCorrectCount + mIncorrectCount));
+            Log.d(TAG, String.format("Quiz is over with result %d%%", percentage));
+            mCorrectCount = 0;
+            mIncorrectCount = 0;
+            String text = String.format(getResources().getString(R.string.results), percentage);
+            toast = Toast.makeText(QuizActivity.this, text, Toast.LENGTH_LONG);
+            toast.setGravity(Gravity.TOP, 0, 200);
+            toast.show();
+        } else {
+            toast = Toast.makeText(QuizActivity.this,
+                    messageResId,
+                    Toast.LENGTH_SHORT);
+            toast.setGravity(Gravity.TOP, 0, 200);
+            toast.show();
+        }
+    }
+
+    // Challenge 3:1
+    private void setAnswerButtonEnabled(boolean state) {
+        mTrueButton.setEnabled(state);
+        mFalseButton.setEnabled(state);
     }
 }
